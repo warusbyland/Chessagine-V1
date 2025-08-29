@@ -10,7 +10,6 @@ const int BOARD_SIZE = 8; // 8x8 board
 const int WINDOW_SIZE = TILE_SIZE * BOARD_SIZE;
 
 const bool displayWhiteSide = true; // Show white as the current player (flips board)
-
 std::string pieces[PIECE_NB] = {"wp", "wh", "wb", "wr", "wq", "wk", 
                         "bp", "bh", "bb", "br", "bq", "bk"}; // Index -> string
 std::map<Piece, sf::Texture> pieceTextures;

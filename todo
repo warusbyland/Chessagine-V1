@@ -1,2 +1,0 @@
-movegen defects:
-    enpassant doesn't check king safety

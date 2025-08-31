@@ -1,5 +1,6 @@
 #include "moveGen.h"
 #include "../moves.h"
+#include <chrono>
 
 constexpr BB KING_MOVES[64] = {
     770ULL,1797ULL,3594ULL,7188ULL,14376ULL,28752ULL,57504ULL,49216ULL,197123ULL,460039ULL,920078ULL,
@@ -394,13 +395,12 @@ Moves MoveGen::genLegalMoves(Board &pos) {
     Moves moveList;
     moveList.reserve(100);
 
-    genKingMoves(pos, moveList); 
-
     genPawnMoves(pos, moveList);
     genKnightMoves(pos, moveList);
     genBishopMoves(pos, moveList);
     genRookMoves(pos, moveList);
     genQueenMoves(pos, moveList);
+    genKingMoves(pos, moveList); 
 
     return moveList;
 }
@@ -409,6 +409,7 @@ int perft(Board &pos, int depth) {
     if (depth == 0) return 1;
 
     Moves ml = MoveGen::genLegalMoves(pos);
+    if (ml.empty()) return 0;
     
     int nodes = 0;
     for (Move m : ml) {
@@ -422,8 +423,11 @@ int perft(Board &pos, int depth) {
 void MoveGen::perftDebug(Board &pos, int depth) {
     std::string files[8] = { "a", "b", "c", "d", "e", "f", "g", "h" };
 
+    auto start = std::chrono::high_resolution_clock::now();
+
     int totalNodes = 0;
     Moves ml = MoveGen::genLegalMoves(pos);
+    if (ml.empty()) return;
 
     for (Move m : ml) {
         pos.move(m);
@@ -437,5 +441,11 @@ void MoveGen::perftDebug(Board &pos, int depth) {
 
         pos.undo();
     }
-    std::cout << "\nNodes searched: " << totalNodes << "\n";
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    std::cout << "\nNodes searched: " << totalNodes << " in " << duration.count() << 
+                " microseconds (" << static_cast<float>(totalNodes) / duration.count() << " mn/s)\n";
 }
+

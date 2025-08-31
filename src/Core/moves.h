@@ -66,6 +66,7 @@ enum Piece {
 };
 
 enum Color : uint8_t { WHITE, BLACK, BOTH, COLOR_NB};
+enum GameState { ONGOING, CHECKMATE, STALEMATE };
 
 inline Color operator!(Color c) {
     return Color(1 - c); // Flip color

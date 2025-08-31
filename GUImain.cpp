@@ -3,6 +3,8 @@
 #include <chrono>
 
 #include "src/Core/MoveGen/moveGen.h"
+#include "src/Core/Evaluation/Eval.h"
+#include "src/Chessagine.h"
 
 const int TILE_SIZE = 160; // Size of each square in pixels
 const int TILE_SIZE_HALF = TILE_SIZE / 2;
@@ -173,8 +175,13 @@ int main() {
                 auto [file, rank] = getBoardCoordinates(window, mousePos, displayWhiteSide);
                 if (file >= 0 && file < BOARD_SIZE && rank >= 0 && rank < BOARD_SIZE) {
                     int targetSq = rank * 8 + file;
-                    // pos.playerMove(selectedSq, targetSq, QUIET);
-                    measureTime([&]() { MoveGen::perftDebug(pos, 5); });
+                    pos.playerMove(selectedSq, targetSq, QUIET);
+                    std::cout << Eval::eval(pos)<< " value\n";
+
+                    GameState state = pos.getGameState();
+                    if (state == CHECKMATE) std::cout << "checkmate!\n";
+                    else if (state == STALEMATE) std::cout << "draw!\n";
+                    // MoveGen::perftDebug(pos, 6);
                 }
             }
         }

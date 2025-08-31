@@ -1,6 +1,7 @@
 #include "Board.h"
 #include <iostream>
 #include "../MoveGen/moveGen.h"
+#include "../../Chessagine.h"
 
 void printBB(BB bb) {
     const char* s[2] = { " ", "x" };
@@ -16,7 +17,7 @@ void printBB(BB bb) {
     }
 }
 
-Board::Board(const std::string& fen) {
+void Board::loadFen(const std::string& fen) {
     //parse the FEN string
     size_t pos = 0;
     int square = 63;
@@ -105,7 +106,7 @@ Board::Board(const std::string& fen) {
     updateCache();
 }
 
-Piece Board::getPiece(const int sq) {
+Piece Board::getPiece(const int sq) const {
     uint64_t bitmask = 1ULL << sq;
 
     for (int i = 0; i < PIECE_NB; ++i) {
@@ -114,7 +115,6 @@ Piece Board::getPiece(const int sq) {
 
     return PIECE_NB;
 }
-
 void Board::updateCache() {
     occupancies[WHITE] = pieceBB[0] | pieceBB[1] | pieceBB[2] | pieceBB[3] | pieceBB[4] | pieceBB[5];
     occupancies[BLACK] = pieceBB[6] | pieceBB[7] | pieceBB[8] | pieceBB[9] | pieceBB[10] | pieceBB[11];
@@ -131,8 +131,13 @@ bool Board::isMoveSafe(Color us, int from, int to) {
     setPiece(enemy, to);
     return getKingBB(us) & safe; 
 }  
+bool Board::isKingInCheck() const {
+    return getKingBB(turn) & atkSq[!turn];
+}
 
 void Board::playerMove(int from, int to, Flag promo = QUIET) {
+    if (state != ONGOING) return;
+
     std::string flagStrings[14] = {
         "QUIET","DOUBLE_PUSH","KING_CASTLE","QUEEN_CASTLE",
         "CAPTURE","EN_PASSANT","PROMO_KNIGHT","PROMO_BISHOP",
@@ -145,6 +150,10 @@ void Board::playerMove(int from, int to, Flag promo = QUIET) {
     };
 
     Moves moves = MoveGen::genLegalMoves(*this);
+    if (moves.empty()) {
+        gameState();
+        return;
+    }
 
     for (int i = 0; i < moves.size(); i++) {
         const Move m = moves[i];
@@ -153,30 +162,28 @@ void Board::playerMove(int from, int to, Flag promo = QUIET) {
         std::string piece = pieceStrings[getPiece(fromSquare(m))];
         std::string flag = flagStrings[moveFlag(m)];
 
-        std::cout << "Move "<< i + 1 << ": " << piece << " " << fromM << "-" << toM << " " << flag << "\n";
+        // std::cout << "Move "<< i + 1 << ": " << piece << " " << fromM << "-" << toM << " " << flag << "\n";
         if (fromM == from && toM == to) {
             move(m);
+            Move m = Chessagine::think(*this, 5);
+            if (state == ONGOING) move(m);
             return;
         }
     }
 }
-
 void Board::move(Move m) {
     const int from = fromSquare(m);
     const int to = toSquare(m);
     const Flag f = moveFlag(m);
-    MoveInfo info;
+    GameInfo info;
 
     // Save current state
-    memcpy(info.state.pieceBB, pieceBB, sizeof(pieceBB));
-    memcpy(info.state.occupancies, occupancies, sizeof(occupancies));
-    info.state.turn = turn;
-    info.state.epSq = epSq;
-    info.state.castlingRights = castlingRights;
-
-    info.from = from;
-    info.to = to;
-    info.capturedPiece = getPiece(to); // Your own function
+    memcpy(info.pieceBB, pieceBB, sizeof(pieceBB));
+    memcpy(info.occupancies, occupancies, sizeof(occupancies));
+    memcpy(info.atkSq, atkSq, sizeof(atkSq));
+    info.turn = turn;
+    info.epSq = epSq;
+    info.castlingRights = castlingRights;
 
     moveHistory.push_back(info);
 
@@ -266,21 +273,34 @@ void Board::move(Move m) {
         pieceBB[piece] |= toMask;
     }
 
-    turn = !turn;
     updateCache();
+    turn = !turn;
 }
-
 void Board::undo() {
     if (moveHistory.empty())
         return;
 
-    MoveInfo last = moveHistory.back();
+    GameInfo last = moveHistory.back();
     moveHistory.pop_back();
 
     // Restore state
-    memcpy(pieceBB, last.state.pieceBB, sizeof(pieceBB));
-    memcpy(occupancies, last.state.occupancies, sizeof(occupancies));
-    turn = last.state.turn;
-    epSq = last.state.epSq;
-    castlingRights = last.state.castlingRights;
+    memcpy(pieceBB, last.pieceBB, sizeof(pieceBB));
+    memcpy(occupancies, last.occupancies, sizeof(occupancies));
+    memcpy(atkSq, last.atkSq, sizeof(atkSq));
+    epSq = last.epSq;
+    castlingRights = last.castlingRights;
+
+    turn = !turn;
+    state = ONGOING;
+}
+
+// If moves is empty
+GameState Board::gameState() {
+    if (isKingInCheck()) {
+        state = CHECKMATE;
+        return state;
+    }
+
+    state = STALEMATE;
+    return state;
 }

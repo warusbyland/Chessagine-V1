@@ -26,9 +26,6 @@ Score Eval::eval(Board& pos) {
 }
 
 Score Eval::evalGameState(Board& pos) {
-    Color c = pos.getTurn();
-
-    GameState gamestate = pos.gameState();
-    if (gamestate == CHECKMATE) return c == WHITE ? -INF : INF;
-    return 0; // Stalemate
+    if (pos.isKingInCheck()) return pos.getTurn() == WHITE ? -INF : INF;
+    else return 0;
 }

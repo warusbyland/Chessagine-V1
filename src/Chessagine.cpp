@@ -33,29 +33,38 @@ Score Chessagine::minimax(Board& pos, int depth, bool maximizingPlayer, Score al
     }
 }
 
-Move Chessagine::think(Board& pos, int depth) {
-    Color turn = pos.getTurn();
+void Chessagine::think(Board& pos, int depth) {
+    Color c = pos.getTurn();
+    bool maximizingPlayer = c == WHITE;
 
-    Score bestScore = turn == WHITE ? -INF : INF;
+    Score bestScore = c == WHITE ? -INF : INF;
     Move bestMove;
     Score alpha = -INF;
     Score beta = INF;
 
     Moves ml = MoveGen::genLegalMoves(pos);
-    if (ml.empty()) {
-        pos.gameState();
-        return 0 ; 
-    }
+    if (ml.empty()) return;
 
     for (Move m : ml) {
         pos.move(m);
-        Score eval = minimax(pos, depth - 1, !turn, alpha, beta);
+        Score eval = minimax(pos, depth - 1, !maximizingPlayer, alpha, beta);
+        
+        const int from = fromSquare(m);
+        const int to = toSquare(m);
+
+        char fromFile = 'a' + (from % 8);
+        int fromRank = 1 + (from / 8);
+        char toFile = 'a' + (to % 8);
+        int toRank = 1 + (to / 8);
+
+        std::cout << fromFile << fromRank << toFile << toRank << ": " << eval << " eval\n";
+
         pos.undo();
-        if ((turn == WHITE && bestScore < eval) || (turn == BLACK && bestScore > eval)) {
+        if ((maximizingPlayer && bestScore < eval) || (!maximizingPlayer && bestScore > eval)) {
             bestScore = eval;
             bestMove = m;
         }
     }
     
-    return bestMove;
+    pos.move(bestMove);
 }

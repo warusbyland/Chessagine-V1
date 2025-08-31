@@ -57,9 +57,6 @@ public:
     void playerMove(int from, int to, Flag promo);
     void move(Move m);
     void undo();
-
-    GameState gameState();
-    GameState getGameState() const { return state; }
 private:
     BB pieceBB[PIECE_NB] = {0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL};
     Color turn = WHITE;
@@ -70,7 +67,6 @@ private:
     BB atkSq[BOTH] = {0ULL, 0ULL};
     // Piece board[64]; // Square -> Piece
     int8_t epSq = -1;
-    GameState state = ONGOING;
 
 
     uint8_t castlingRights = WHITE_KINGSIDE | WHITE_QUEENSIDE | BLACK_KINGSIDE | BLACK_QUEENSIDE;

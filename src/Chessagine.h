@@ -7,5 +7,5 @@
 
 namespace Chessagine {
     Score minimax(Board& pos, int depth, bool maximizingPlayer, Score alpha, Score beta);
-    Move think(Board &pos, int depth);
+    void think(Board &pos, int depth);
 }

@@ -136,8 +136,6 @@ bool Board::isKingInCheck() const {
 }
 
 void Board::playerMove(int from, int to, Flag promo = QUIET) {
-    if (state != ONGOING) return;
-
     std::string flagStrings[14] = {
         "QUIET","DOUBLE_PUSH","KING_CASTLE","QUEEN_CASTLE",
         "CAPTURE","EN_PASSANT","PROMO_KNIGHT","PROMO_BISHOP",
@@ -150,23 +148,12 @@ void Board::playerMove(int from, int to, Flag promo = QUIET) {
     };
 
     Moves moves = MoveGen::genLegalMoves(*this);
-    if (moves.empty()) {
-        gameState();
-        return;
-    }
+    if (moves.empty()) return;
 
-    for (int i = 0; i < moves.size(); i++) {
-        const Move m = moves[i];
-        const int fromM = fromSquare(m);
-        const int toM = toSquare(m);
-        std::string piece = pieceStrings[getPiece(fromSquare(m))];
-        std::string flag = flagStrings[moveFlag(m)];
-
-        // std::cout << "Move "<< i + 1 << ": " << piece << " " << fromM << "-" << toM << " " << flag << "\n";
-        if (fromM == from && toM == to) {
+    for (Move m : moves) {
+        if (fromSquare(m) == from && toSquare(m) == to) {
             move(m);
-            Move m = Chessagine::think(*this, 5);
-            if (state == ONGOING) move(m);
+            Chessagine::think(*this, 5);
             return;
         }
     }
@@ -291,16 +278,4 @@ void Board::undo() {
     castlingRights = last.castlingRights;
 
     turn = !turn;
-    state = ONGOING;
-}
-
-// If moves is empty
-GameState Board::gameState() {
-    if (isKingInCheck()) {
-        state = CHECKMATE;
-        return state;
-    }
-
-    state = STALEMATE;
-    return state;
 }

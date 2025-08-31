@@ -393,7 +393,7 @@ void genPawnMoves(Board &pos, Moves &moves) {
 
 Moves MoveGen::genLegalMoves(Board &pos) {
     Moves moveList;
-    moveList.reserve(100);
+    moveList.reserve(150);
 
     genPawnMoves(pos, moveList);
     genKnightMoves(pos, moveList);
@@ -409,8 +409,7 @@ int perft(Board &pos, int depth) {
     if (depth == 0) return 1;
 
     Moves ml = MoveGen::genLegalMoves(pos);
-    if (ml.empty()) return 0;
-    
+
     int nodes = 0;
     for (Move m : ml) {
         pos.move(m);
@@ -421,8 +420,6 @@ int perft(Board &pos, int depth) {
     return nodes;
 }
 void MoveGen::perftDebug(Board &pos, int depth) {
-    std::string files[8] = { "a", "b", "c", "d", "e", "f", "g", "h" };
-
     auto start = std::chrono::high_resolution_clock::now();
 
     int totalNodes = 0;
@@ -436,8 +433,12 @@ void MoveGen::perftDebug(Board &pos, int depth) {
         const int from = fromSquare(m);
         const int to = toSquare(m);
 
-        std::cout << files[from % 8] << (from / 8 + 1) << 
-                     files[to % 8] << (to / 8 + 1) << ": " << nodes << "\n";
+        char fromFile = 'a' + (from % 8);
+        int fromRank = 1 + (from / 8);
+        char toFile = 'a' + (to % 8);
+        int toRank = 1 + (to / 8);
+
+        std::cout << fromFile << fromRank << toFile << toRank << ": " << nodes << "\n";
 
         pos.undo();
     }

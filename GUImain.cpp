@@ -176,11 +176,6 @@ int main() {
                 if (file >= 0 && file < BOARD_SIZE && rank >= 0 && rank < BOARD_SIZE) {
                     int targetSq = rank * 8 + file;
                     pos.playerMove(selectedSq, targetSq, QUIET);
-                    std::cout << Eval::eval(pos)<< " value\n";
-
-                    GameState state = pos.getGameState();
-                    if (state == CHECKMATE) std::cout << "checkmate!\n";
-                    else if (state == STALEMATE) std::cout << "draw!\n";
                     // MoveGen::perftDebug(pos, 6);
                 }
             }

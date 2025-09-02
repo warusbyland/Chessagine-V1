@@ -159,6 +159,7 @@ int main() {
                 else if (e.key.code == sf::Keyboard::Num2) measureTime([&]() { MoveGen::perftDebug(pos, 2); });
                 else if (e.key.code == sf::Keyboard::Num3) measureTime([&]() { MoveGen::perftDebug(pos, 3); });
                 else if (e.key.code == sf::Keyboard::Num4) measureTime([&]() { MoveGen::perftDebug(pos, 4); });
+                else if (e.key.code == sf::Keyboard::Num4) measureTime([&]() { MoveGen::perftDebug(pos, 5); });
             }
 
             else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {

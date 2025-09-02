@@ -9,7 +9,6 @@ namespace FenUtility {
 }
 
 struct GameInfo {
-    Color turn;
     BB pieceBB[PIECE_NB];
     BB occupancies[COLOR_NB];
     BB atkSq[BOTH];
@@ -20,6 +19,7 @@ struct GameInfo {
 class Board {
 public:
     void loadFen(const std::string& fen);
+    std::string getFen() const;
     Board(const std::string& fen = FenUtility::startpos) { loadFen(fen); }
 
     inline Color getTurn() const { return turn; }
@@ -58,7 +58,7 @@ public:
     void move(Move m);
     void undo();
 private:
-    BB pieceBB[PIECE_NB] = {0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL};
+    BB pieceBB[PIECE_NB] = {};
     Color turn = WHITE;
     // First bit is a1, last is h8
     
@@ -69,7 +69,7 @@ private:
     int8_t epSq = -1;
 
 
-    uint8_t castlingRights = WHITE_KINGSIDE | WHITE_QUEENSIDE | BLACK_KINGSIDE | BLACK_QUEENSIDE;
+    uint8_t castlingRights = 0;
     // --- To REMOVE a castling right --- 
     // castlingRights &= ~WHITE_KINGSIDE; 
 

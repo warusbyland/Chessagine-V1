@@ -2,6 +2,28 @@
 #include "../moves.h"
 #include <chrono>
 
+using namespace BUtils; 
+
+std::string moveFormat(Move m) {
+    std::string flagStrings[14] = {
+        "QUIET","DOUBLE_PUSH","KING_CASTLE","QUEEN_CASTLE",
+        "CAPTURE","EN_PASSANT","PROMO_KNIGHT","PROMO_BISHOP",
+        "PROMO_ROOK","PROMO_QUEE","PROMO_CAPTURE_KNIGHT",
+        "PROMO_CAPTURE_BISHOP","PROMO_CAPTURE_ROOK","PROMO_CAPTURE_QUEEN" 
+    };
+
+    const int from = fromSquare(m)  ;
+    const int to = toSquare(m);
+
+    char fromFile = 'a' + (7 - (from % 8));
+    int fromRank = 1 + (from / 8);
+    char toFile = 'a' + (7 - (to % 8));
+    int toRank = 1 + (to / 8);
+
+    return std::string() + fromFile + std::to_string(fromRank) + toFile   
+                        + std::to_string(toRank) + " " + flagStrings[moveFlag(m)];
+}
+
 constexpr BB KING_MOVES[64] = {
     770ULL,1797ULL,3594ULL,7188ULL,14376ULL,28752ULL,57504ULL,49216ULL,197123ULL,460039ULL,920078ULL,
     1840156ULL,3680312ULL,7360624ULL,14721248ULL,12599488ULL,50463488ULL,117769984ULL,235539968ULL,
@@ -106,19 +128,19 @@ inline BB queenAttacks(int sq, BB occupancy) {
 
 inline BB pawnsAttacks(Color color, BB pawns) {
     return (color == WHITE)
-        ? ((pawns << 7) & BUtils::NOT_H) | ((pawns << 9) & BUtils::NOT_A)
-        : ((pawns >> 9) & BUtils::NOT_H) | ((pawns >> 7) & BUtils::NOT_A);
+        ? ((pawns << 7) & NOT_H) | ((pawns << 9) & NOT_A)
+        : ((pawns >> 9) & NOT_H) | ((pawns >> 7) & NOT_A);
 }
 inline BB knightsAttacks(BB knights) {
-    return (((knights << 15) | (knights >> 17)) & BUtils::NOT_H) | 
-    (((knights << 6) | (knights >> 10)) & BUtils::NOT_GH) | 
-    (((knights << 17) | (knights >> 15)) & BUtils::NOT_A) | 
-    (((knights << 10) | (knights >> 6)) & BUtils::NOT_AB);
+    return (((knights << 15) | (knights >> 17)) & NOT_H) | 
+    (((knights << 6) | (knights >> 10)) & NOT_GH) | 
+    (((knights << 17) | (knights >> 15)) & NOT_A) | 
+    (((knights << 10) | (knights >> 6)) & NOT_AB);
 }
 inline BB kingsAttacks(BB kings) {
     return (kings << 8) | (kings >> 8) |                          
-            (((kings << 1) | (kings << 9) | (kings >> 7)) & BUtils::NOT_A) |
-            (((kings >> 1) | (kings << 7) | (kings >> 9)) & BUtils::NOT_H);
+            (((kings << 1) | (kings << 9) | (kings >> 7)) & NOT_A) |
+            (((kings >> 1) | (kings << 7) | (kings >> 9)) & NOT_H);
 }
 BB bishopsAttacks(BB bishops, BB occupancy) {
     BB atk = 0;
@@ -182,7 +204,7 @@ void genKingMoves(Board &pos, Moves &moves) {
     if (us == WHITE) {
         // White Kingside: E1 -> G1, empty: F1, G1; not attacked: E1, F1, G1; rook on H1
         if ((rights & WHITE_KINGSIDE) &&
-            !(pos.getOccupancy(BOTH) & ((1ULL << F1) | (1ULL << G1))) &&
+            !(occupancy & ((1ULL << F1) | (1ULL << G1))) &&
             !(pos.getAttackedBy(BLACK) & ((1ULL << E1) | (1ULL << F1) | (1ULL << G1))) &&
             (pos.getRookBB(WHITE) & (1ULL << H1)))
         {
@@ -191,7 +213,7 @@ void genKingMoves(Board &pos, Moves &moves) {
 
         // White Queenside: E1 -> C1, empty: B1, C1, D1; not attacked: C1, D1, E1; rook on A1
         if ((rights & WHITE_QUEENSIDE) &&
-            !(pos.getOccupancy(BOTH) & ((1ULL << B1) | (1ULL << C1) | (1ULL << D1))) &&
+            !(occupancy & ((1ULL << B1) | (1ULL << C1) | (1ULL << D1))) &&
             !(pos.getAttackedBy(BLACK) & ((1ULL << C1) | (1ULL << D1) | (1ULL << E1))) &&
             (pos.getRookBB(WHITE) & (1ULL << A1)))
         {
@@ -201,7 +223,7 @@ void genKingMoves(Board &pos, Moves &moves) {
     } else {
         // Black Kingside: E8 -> G8, empty: F8, G8; not attacked: E8, F8, G8; rook on H8
         if ((rights & BLACK_KINGSIDE) &&
-            !(pos.getOccupancy(BOTH) & ((1ULL << F8) | (1ULL << G8))) &&
+            !(occupancy & ((1ULL << F8) | (1ULL << G8))) &&
             !(pos.getAttackedBy(WHITE) & ((1ULL << E8) | (1ULL << F8) | (1ULL << G8))) &&
             (pos.getRookBB(BLACK) & (1ULL << H8)))
         {
@@ -210,7 +232,7 @@ void genKingMoves(Board &pos, Moves &moves) {
 
         // Black Queenside: E8 -> C8, empty: B8, C8, D8; not attacked: C8, D8, E8; rook on A8
         if ((rights & BLACK_QUEENSIDE) &&
-            !(pos.getOccupancy(BOTH) & ((1ULL << B8) | (1ULL << C8) | (1ULL << D8))) &&
+            !(occupancy & ((1ULL << B8) | (1ULL << C8) | (1ULL << D8))) &&
             !(pos.getAttackedBy(WHITE) & ((1ULL << C8) | (1ULL << D8) | (1ULL << E8))) &&
             (pos.getRookBB(BLACK) & (1ULL << A8)))
         {
@@ -295,15 +317,14 @@ void genPawnMoves(Board &pos, Moves &moves) {
     const Color them = !us;
 
     const BB pawns = pos.getPawnBB(us);
-    const BB illegal = ~pos.getOccupancy(us);
     const BB enemy = pos.getOccupancy(them);
     const BB occupancy = pos.getAllOccupancy();
 
     const int dir = us == WHITE ? 8 : -8;
-    const BB rank_3 = us == WHITE ? BUtils::RANK_3 : BUtils::RANK_6;
+    const BB rank_3 = us == WHITE ? RANK_3 : RANK_6;
     const int dirEast = us == WHITE ? 9 : -7;
     const int dirWest = us == WHITE ? 7 : -9;
-    const BB promoRank = us == WHITE ? BUtils::RANK_8 : BUtils::RANK_1;
+    const BB promoRank = us == WHITE ? RANK_8 : RANK_1;
 
     // QUIET moves
     BB shift = bs(pawns, dir) & ~occupancy;
@@ -313,8 +334,8 @@ void genPawnMoves(Board &pos, Moves &moves) {
     shift &= ~promoRank; // Remove promotion squares
 
     // CAPTURE moves
-    BB atkEast = bs(pawns, dirEast) & BUtils::NOT_A & enemy;
-    BB atkWest = bs(pawns, dirWest) & BUtils::NOT_H & enemy;
+    BB atkEast = bs(pawns, dirEast) & NOT_A & enemy;
+    BB atkWest = bs(pawns, dirWest) & NOT_H & enemy;
 
     BB promoEast = atkEast & promoRank; // Extract CAPTURE promotions
     BB promoWest = atkWest & promoRank;
@@ -378,11 +399,11 @@ void genPawnMoves(Board &pos, Moves &moves) {
     if (epSq != -1) {
         BB attackers;
         if (us == WHITE)
-            attackers = ((bm(epSq - 9) & ~BUtils::FILE_H) |
-                        (bm(epSq - 7) & ~BUtils::FILE_A)) & pawns;
+            attackers = ((bm(epSq - 9) & ~FILE_H) |
+                        (bm(epSq - 7) & ~FILE_A)) & pawns;
         else
-            attackers = ((bm(epSq + 7) & ~BUtils::FILE_H) |
-                        (bm(epSq + 9) & ~BUtils::FILE_A)) & pawns;
+            attackers = ((bm(epSq + 7) & ~FILE_H) |
+                        (bm(epSq + 9) & ~FILE_A)) & pawns;
 
         while (attackers) {
             int from = popLSB(attackers);
@@ -403,6 +424,22 @@ Moves MoveGen::genLegalMoves(Board &pos) {
     genKingMoves(pos, moveList); 
 
     return moveList;
+}
+
+void MoveGen::moveGenDebug(Board &pos) {
+    std::string pieces[PIECE_NB] = {
+        "White pawn", "White knight", "White bishop", "White rook", "White queen", "White king",
+        "Black pawn", "Black knight", "Black bishop", "Black rook", "Black queen", "Black king"
+    };
+
+    Moves moves = genLegalMoves(pos);
+
+    for (Move m : moves) {
+        const Flag f = moveFlag(m);
+        const Piece p = pos.getPiece(fromSquare(m));
+
+        std::cout << pieces[p] << " move " << moveFormat(m) << "\n";
+    }
 }
 
 int perft(Board &pos, int depth) {
@@ -430,15 +467,8 @@ void MoveGen::perftDebug(Board &pos, int depth) {
         pos.move(m);
         const int nodes = perft(pos, depth - 1);
         totalNodes += nodes;
-        const int from = fromSquare(m);
-        const int to = toSquare(m);
 
-        char fromFile = 'a' + (from % 8);
-        int fromRank = 1 + (from / 8);
-        char toFile = 'a' + (to % 8);
-        int toRank = 1 + (to / 8);
-
-        std::cout << fromFile << fromRank << toFile << toRank << ": " << nodes << "\n";
+        std::cout << moveFormat(m) << ": " << nodes << "\n";
 
         pos.undo();
     }
@@ -449,4 +479,3 @@ void MoveGen::perftDebug(Board &pos, int depth) {
     std::cout << "\nNodes searched: " << totalNodes << " in " << duration.count() << 
                 " microseconds (" << static_cast<float>(totalNodes) / duration.count() << " mn/s)\n";
 }
-

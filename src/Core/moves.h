@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <cassert>
 
 //                  ---+---+---+---+---+---+---+---+---+
 //                   8 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 
@@ -68,7 +69,8 @@ enum Piece {
 enum Color : uint8_t { WHITE, BLACK, BOTH, COLOR_NB};
 
 inline Color operator!(Color c) {
-    return Color(1 - c); // Flip color
+    // assert(c == WHITE || c == BLACK); // Safety check
+    return Color(1 - c);
 }
 
 inline Piece getPawn(Color c)   { return c == WHITE ? WHITE_PAWN   : BLACK_PAWN;  }
@@ -86,14 +88,14 @@ enum CastlingRights {
 };
 const uint8_t ROOKCASTLELOSS[64] = {
     /* Squares 0-63 */
-    WHITE_QUEENSIDE, 0, 0, 0, 0, 0, 0, WHITE_KINGSIDE,
+    WHITE_KINGSIDE, 0, 0, 0, 0, 0, 0, WHITE_QUEENSIDE,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    BLACK_QUEENSIDE, 0, 0, 0, 0, 0, 0, BLACK_KINGSIDE // rank 8
+    BLACK_KINGSIDE, 0, 0, 0, 0, 0, 0, BLACK_QUEENSIDE // rank 8
 };
 enum Flag {
     QUIET, DOUBLE_PUSH, KING_CASTLE, QUEEN_CASTLE, CAPTURE, EN_PASSANT, 
@@ -101,11 +103,6 @@ enum Flag {
     PROMO_CAPTURE_N, PROMO_CAPTURE_B, PROMO_CAPTURE_R, PROMO_CAPTURE_Q
 };
 namespace BUtils {
-
-    // Single squares
-    constexpr BB A1 = 1ULL << 0;
-    constexpr BB H8 = 1ULL << 63;
-
     // Files
     constexpr BB FILE_A = 0x0101010101010101ULL;
     constexpr BB FILE_B = FILE_A << 1;
@@ -159,6 +156,8 @@ inline Move makeMove(int from, int to, int flag) { return (flag << 12) | (to << 
 inline int fromSquare(Move m) { return m & 0x3F; }           // 6 bits
 inline int toSquare(Move m)   { return (m >> 6) & 0x3F; }    // next 6 bits
 inline Flag moveFlag(Move m)   { return static_cast<Flag>((m >> 12) & 0xF); }    // 4 bits
+std::string moveFormat(Move m);
+
 
 inline int popLSB(BB &bb) {
     int i = __builtin_ctzll(bb);

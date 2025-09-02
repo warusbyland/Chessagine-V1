@@ -33,5 +33,6 @@ namespace MoveGen {
     BB attackedBy(Board &pos, Color side);
     BB attackedBy(Board &pos, Color side, BB occupancy);
     Moves genLegalMoves(Board &pos);
+    void moveGenDebug(Board &pos);
     void perftDebug(Board &pos, int depth);
 }

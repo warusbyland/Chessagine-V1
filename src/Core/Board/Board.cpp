@@ -18,11 +18,15 @@ void printBB(BB bb) {
 }
 
 void Board::loadFen(const std::string& fen) {
-    //parse the FEN string
+    for (int i = 0; i < PIECE_NB; ++i) pieceBB[i] = 0ULL;
+    castlingRights = 0;
+    moveHistory.clear();
+
+    // parse the FEN string
     size_t pos = 0;
     int square = 63;
 
-    //piece placement
+    // piece placement
     while (fen[pos] != ' ') {
         char c = fen[pos++];
 
@@ -53,11 +57,11 @@ void Board::loadFen(const std::string& fen) {
         }
     }
 
-    // 2  skin color
+    // 2  turn
     pos++;
     turn = fen[pos++] == 'w' ? WHITE : BLACK;
 
-    // 3 human rights
+    // 3 castle rights
     pos++; 
     castlingRights = 0ULL;
     while (fen[pos] != ' ') {
@@ -70,7 +74,7 @@ void Board::loadFen(const std::string& fen) {
         }
     }
 
-    // Field 4: En passant target square
+    // en pasasnt
     if (fen[pos++] == '-') {
         epSq = -1;
         ++pos;
@@ -105,6 +109,85 @@ void Board::loadFen(const std::string& fen) {
 
     updateCache();
 }
+std::string Board::getFen() const {
+    std::string fen;
+
+    // 1. Piece placement
+    for (int rank = 7; rank >= 0; --rank) {
+        int emptyCount = 0;
+
+        for (int file = 7; file >= 0; --file) {
+            int square = rank * 8 + file;
+            char pieceChar = 0;
+
+            for (int i = 0; i < PIECE_NB; ++i) {
+                if (pieceBB[i] & (1ULL << square)) {
+                    switch (i) {
+                        case WHITE_PAWN:   pieceChar = 'P'; break;
+                        case WHITE_KNIGHT: pieceChar = 'N'; break;
+                        case WHITE_BISHOP: pieceChar = 'B'; break;
+                        case WHITE_ROOK:   pieceChar = 'R'; break;
+                        case WHITE_QUEEN:  pieceChar = 'Q'; break;
+                        case WHITE_KING:   pieceChar = 'K'; break;
+                        case BLACK_PAWN:   pieceChar = 'p'; break;
+                        case BLACK_KNIGHT: pieceChar = 'n'; break;
+                        case BLACK_BISHOP: pieceChar = 'b'; break;
+                        case BLACK_ROOK:   pieceChar = 'r'; break;
+                        case BLACK_QUEEN:  pieceChar = 'q'; break;
+                        case BLACK_KING:   pieceChar = 'k'; break;
+                    }
+                    break;
+                }
+            }
+
+            if (pieceChar) {
+                if (emptyCount > 0) {
+                    fen += std::to_string(emptyCount);
+                    emptyCount = 0;
+                }
+                fen += pieceChar;
+            } else {
+                emptyCount++;
+            }
+        }
+
+        if (emptyCount > 0)
+            fen += std::to_string(emptyCount);
+
+        if (rank > 0)
+            fen += '/';
+    }
+
+    // 2. Turn
+    fen += ' ';
+    fen += (turn == WHITE) ? 'w' : 'b';
+
+    // 3. Castling rights
+    fen += ' ';
+    std::string castlingStr;
+    if (castlingRights & WHITE_KINGSIDE)  castlingStr += 'K';
+    if (castlingRights & WHITE_QUEENSIDE) castlingStr += 'Q';
+    if (castlingRights & BLACK_KINGSIDE)  castlingStr += 'k';
+    if (castlingRights & BLACK_QUEENSIDE) castlingStr += 'q';
+    fen += castlingStr.empty() ? "-" : castlingStr;
+
+    // 4. En passant
+    fen += ' ';
+    if (epSq == -1) {
+        fen += '-';
+    } else {
+        int sq = epSq - 1;
+        char file = 'a' + (sq % 8);
+        char rank = '1' + (sq / 8);
+        fen += file;
+        fen += rank;
+    }
+
+    // 5. Halfmove clock and fullmove number (default 0/1 if not tracked)
+    fen += " 0 1";
+
+    return fen;
+}
 
 Piece Board::getPiece(const int sq) const {
     uint64_t bitmask = 1ULL << sq;
@@ -118,7 +201,7 @@ Piece Board::getPiece(const int sq) const {
 void Board::updateCache() {
     occupancies[WHITE] = pieceBB[0] | pieceBB[1] | pieceBB[2] | pieceBB[3] | pieceBB[4] | pieceBB[5];
     occupancies[BLACK] = pieceBB[6] | pieceBB[7] | pieceBB[8] | pieceBB[9] | pieceBB[10] | pieceBB[11];
-    occupancies[BOTH] = occupancies[0] | occupancies[1];
+    occupancies[BOTH] = occupancies[WHITE] | occupancies[BLACK];
 
     atkSq[WHITE] =  MoveGen::attackedBy(*this, WHITE);
     atkSq[BLACK] =  MoveGen::attackedBy(*this, BLACK);
@@ -136,17 +219,6 @@ bool Board::isKingInCheck() const {
 }
 
 void Board::playerMove(int from, int to, Flag promo = QUIET) {
-    std::string flagStrings[14] = {
-        "QUIET","DOUBLE_PUSH","KING_CASTLE","QUEEN_CASTLE",
-        "CAPTURE","EN_PASSANT","PROMO_KNIGHT","PROMO_BISHOP",
-        "PROMO_ROOK","PROMO_QUEE","PROMO_CAPTURE_KNIGHT",
-        "PROMO_CAPTURE_BISHOP","PROMO_CAPTURE_ROOK","PROMO_CAPTURE_QUEEN" 
-    };
-    std::string pieceStrings[PIECE_NB] = {
-        "WHITE_PAWN", "WHITE_KNIGHT", "WHITE_BISHOP", "WHITE_ROOK", "WHITE_QUEEN", "WHITE_KING",
-        "BLACK_PAWN", "BLACK_KNIGHT", "BLACK_BISHOP", "BLACK_ROOK", "BLACK_QUEEN", "BLACK_KING"
-    };
-
     Moves moves = MoveGen::genLegalMoves(*this);
     if (moves.empty()) return;
 
@@ -168,7 +240,6 @@ void Board::move(Move m) {
     memcpy(info.pieceBB, pieceBB, sizeof(pieceBB));
     memcpy(info.occupancies, occupancies, sizeof(occupancies));
     memcpy(info.atkSq, atkSq, sizeof(atkSq));
-    info.turn = turn;
     info.epSq = epSq;
     info.castlingRights = castlingRights;
 
@@ -182,77 +253,89 @@ void Board::move(Move m) {
         epSq = to + (turn == WHITE ? -8 : 8);
     } else { epSq = -1; }
 
+    if (piece == WHITE_KING) {
+        castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
+    } else if (piece == BLACK_KING) {
+        castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
+    } else if (piece == WHITE_ROOK || piece == BLACK_ROOK)
+        castlingRights &= ~ROOKCASTLELOSS[from];
+
     switch (f) {
-        case QUIET:
-            if (piece == WHITE_KING) {
-                castlingRights &= ~WHITE_KINGSIDE;
-                castlingRights &= ~WHITE_QUEENSIDE;
-            } else if (piece == BLACK_KING) {
-                castlingRights &= ~BLACK_KINGSIDE;
-                castlingRights &= ~BLACK_QUEENSIDE;
-            } else if (piece == WHITE_ROOK || piece == BLACK_ROOK)
-                castlingRights &= ROOKCASTLELOSS[from];
-            break;
-        case EN_PASSANT:
+        case EN_PASSANT: {
             if (turn == WHITE) {
                 pieceBB[BLACK_PAWN] &= ~bm(to - 8);
             } else {
                 pieceBB[WHITE_PAWN] &= ~bm(to + 8);
             }
             break;
-        case KING_CASTLE:
+        }
+        case KING_CASTLE: {
             if (turn == WHITE) {
-                castlingRights &= ~WHITE_KINGSIDE;
                 pieceBB[WHITE_ROOK] &= ~1ULL;
                 pieceBB[WHITE_ROOK] |= bm(2);
+                castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
             } else {
-                castlingRights &= ~BLACK_KINGSIDE;
                 pieceBB[BLACK_ROOK] &= ~bm(56);
                 pieceBB[BLACK_ROOK] |= bm(58);
+                castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
             }
             break;
-        case QUEEN_CASTLE:
+        }
+        case QUEEN_CASTLE: {
             if (turn == WHITE) {
-                castlingRights &= ~WHITE_QUEENSIDE;
                 pieceBB[WHITE_ROOK] &= ~bm(7);
                 pieceBB[WHITE_ROOK] |= bm(4);
+                castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
             } else {
-                castlingRights &= ~BLACK_QUEENSIDE;
                 pieceBB[BLACK_ROOK] &= ~bm(63);
                 pieceBB[BLACK_ROOK] |= bm(60);
+                castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
             }
             break;
-        case CAPTURE:
-            pieceBB[getPiece(to)] &= ~toMask;
+        }
+        case CAPTURE: {
+            Piece enemy = getPiece(to);
+            pieceBB[enemy] &= ~toMask;
+            if (enemy == WHITE_ROOK || enemy == BLACK_ROOK)
+                castlingRights &= ~ROOKCASTLELOSS[to];
             break;
-        case PROMO_CAPTURE_N:
+        }
+        case PROMO_CAPTURE_N: {
             pieceBB[getPiece(to)] &= ~toMask;          
             pieceBB[getKnight(turn)] |= toMask;        
             break;
-        case PROMO_CAPTURE_B:
+        }
+        case PROMO_CAPTURE_B: {
             pieceBB[getPiece(to)] &= ~toMask;
             pieceBB[getBishop(turn)] |= toMask;
             break;
-        case PROMO_CAPTURE_R:
+        }
+        case PROMO_CAPTURE_R: {
             pieceBB[getPiece(to)] &= ~toMask;
             pieceBB[getRook(turn)] |= toMask;
             break;
-        case PROMO_CAPTURE_Q:
+        }
+        case PROMO_CAPTURE_Q: {
             pieceBB[getPiece(to)] &= ~toMask;
             pieceBB[getQueen(turn)] |= toMask;
             break;
-        case PROMO_N:
+        }
+        case PROMO_N: {
             pieceBB[getKnight(turn)] |= toMask;
             break;
-        case PROMO_B:
+        }
+        case PROMO_B: {
             pieceBB[getBishop(turn)] |= toMask;
             break;
-        case PROMO_R:
+        }
+        case PROMO_R: {
             pieceBB[getRook(turn)] |= toMask;
             break;
-        case PROMO_Q:
+        }
+        case PROMO_Q: {
             pieceBB[getQueen(turn)] |= toMask;
             break;
+        }
     }
 
     pieceBB[piece] &= ~bm(from);
@@ -277,5 +360,6 @@ void Board::undo() {
     epSq = last.epSq;
     castlingRights = last.castlingRights;
 
+    updateCache();
     turn = !turn;
 }

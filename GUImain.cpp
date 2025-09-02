@@ -101,7 +101,7 @@ sf::Vector2f alignToTile(const sf::Vector2f& pos) {
 }
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1800, 1500), "Chess", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE + 520, WINDOW_SIZE + 220), "Chess", sf::Style::Default);
     window.setFramerateLimit(60);
 
     // This view keeps the board fixed-size and centered
@@ -136,9 +136,7 @@ int main() {
     sf::RectangleShape selectedSquare(sf::Vector2f(TILE_SIZE, TILE_SIZE));
     Piece pieceDragging = PIECE_NB;
     bool isDragging = false;
-    Board pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    Moves ml;
+    Board pos("rnb1k1nr/pppp1p2/4p2p/8/Pb1PP3/2N1B2N/1PP2PP1/R2QKB1q w Qkq - 0 1");
 
 
 
@@ -149,7 +147,20 @@ int main() {
                  e.type == sf::Event::Closed)
                 window.close();
 
-            if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
+            // Debug keybinds
+            if (e.type == sf::Event::KeyPressed) {
+                if (e.key.code == sf::Keyboard::R) pos.loadFen(FenUtility::startpos);
+                else if (e.key.code == sf::Keyboard::F) std::cout << pos.getFen() << "\n";
+                else if (e.key.code == sf::Keyboard::E) 
+                    std::cout << Chessagine::minimax(pos, 4, pos.getTurn() == WHITE, -Eval::INF, Eval::INF) << "\n";
+                else if (e.key.code == sf::Keyboard::T) std::cout << static_cast<int>(pos.getTurn()) << "\n";
+                else if (e.key.code == sf::Keyboard::Num1) MoveGen::perftDebug(pos, 1);
+                else if (e.key.code == sf::Keyboard::Num2) MoveGen::perftDebug(pos, 2);
+                else if (e.key.code == sf::Keyboard::Num3) MoveGen::perftDebug(pos, 3);
+                else if (e.key.code == sf::Keyboard::Num4) MoveGen::perftDebug(pos, 4);
+            }
+
+            else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(mousePos);
                 auto [file, rank] = getBoardCoordinates(window, mousePos, displayWhiteSide);
@@ -176,7 +187,6 @@ int main() {
                 if (file >= 0 && file < BOARD_SIZE && rank >= 0 && rank < BOARD_SIZE) {
                     int targetSq = rank * 8 + file;
                     pos.playerMove(selectedSq, targetSq, QUIET);
-                    // MoveGen::perftDebug(pos, 6);
                 }
             }
         }

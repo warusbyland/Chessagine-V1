@@ -136,7 +136,7 @@ int main() {
     sf::RectangleShape selectedSquare(sf::Vector2f(TILE_SIZE, TILE_SIZE));
     Piece pieceDragging = PIECE_NB;
     bool isDragging = false;
-    Board pos("rnb1k1nr/pppp1p2/4p2p/8/Pb1PP3/2N1B2N/1PP2PP1/R2QKB1q w Qkq - 0 1");
+    Board pos(FenUtility::startpos);
 
 
 

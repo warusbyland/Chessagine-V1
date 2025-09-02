@@ -150,14 +150,15 @@ int main() {
             // Debug keybinds
             if (e.type == sf::Event::KeyPressed) {
                 if (e.key.code == sf::Keyboard::R) pos.loadFen(FenUtility::startpos);
+                else if (e.key.code == sf::Keyboard::U) pos.undo();
                 else if (e.key.code == sf::Keyboard::F) std::cout << pos.getFen() << "\n";
                 else if (e.key.code == sf::Keyboard::E) 
                     std::cout << Chessagine::minimax(pos, 4, pos.getTurn() == WHITE, -Eval::INF, Eval::INF) << "\n";
                 else if (e.key.code == sf::Keyboard::T) std::cout << static_cast<int>(pos.getTurn()) << "\n";
-                else if (e.key.code == sf::Keyboard::Num1) MoveGen::perftDebug(pos, 1);
-                else if (e.key.code == sf::Keyboard::Num2) MoveGen::perftDebug(pos, 2);
-                else if (e.key.code == sf::Keyboard::Num3) MoveGen::perftDebug(pos, 3);
-                else if (e.key.code == sf::Keyboard::Num4) MoveGen::perftDebug(pos, 4);
+                else if (e.key.code == sf::Keyboard::Num1) measureTime([&]() { MoveGen::perftDebug(pos, 1); });
+                else if (e.key.code == sf::Keyboard::Num2) measureTime([&]() { MoveGen::perftDebug(pos, 2); });
+                else if (e.key.code == sf::Keyboard::Num3) measureTime([&]() { MoveGen::perftDebug(pos, 3); });
+                else if (e.key.code == sf::Keyboard::Num4) measureTime([&]() { MoveGen::perftDebug(pos, 4); });
             }
 
             else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
